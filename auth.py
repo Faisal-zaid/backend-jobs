@@ -11,3 +11,15 @@ register_parser.add_argument("name", required=True, type=str, help="Name is requ
 register_parser.add_argument("email", required=True, type=str, help="Email is required")
 register_parser.add_argument("password", required=True, type=str, help="Password is required")
 register_parser.add_argument("role", required=True, type=str, help="Role is required")
+
+class Register(Resource):
+    def post(self):
+        try:
+            data = register_parser.parse_args()
+
+            # Check if user exists
+            if User.query.filter_by(email=data["email"]).first():
+                return {"message": "User already exists"}, 409
+
+            # Hash password
+            password_hash = generate_password_hash(data["password"]).decode("utf-8")
