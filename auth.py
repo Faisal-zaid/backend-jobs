@@ -57,3 +57,33 @@ login_parser = reqparse.RequestParser(bundle_errors=True)
 login_parser.add_argument("email", required=True, type=str, help="Email is required")
 login_parser.add_argument("password", required=True, type=str, help="Password is required")
 
+class Login(Resource):
+    def post(self):
+        try:
+            data = login_parser.parse_args()
+
+            user = User.query.filter_by(email=data["email"]).first()
+            if not user:
+                return {"message": "Invalid email or password"}, 401
+
+            # Verify password safely
+            if not check_password_hash(user.password, data["password"]):
+                return {"message": "Invalid email or password"}, 401
+
+            token = create_access_token(
+                identity=user.id,
+                additional_claims={"role": user.role}
+            )
+
+            return {
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role
+                },
+                "access_token": token
+            }, 200
+        except Exception as e:
+            print("Login error:", e)
+            return {"message": "Login failed", "error": str(e)}, 500
