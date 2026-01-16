@@ -55,3 +55,18 @@ CORS(app)
 
 # Initialize Flask-RESTful API
 api = Api(app)
+
+#ROUTES
+@app.route("/")
+def home():
+    return {"message": "JobConnect API is running"}, 200
+
+# API routes
+api.add_resource(Register, "/register")
+api.add_resource(Login, "/login")
+api.add_resource(JobsResource, "/jobs")
+api.add_resource(JobResource, "/jobs/<int:id>")
+api.add_resource(ApplyJob, "/applications")
+api.add_resource(EmployerApplications, "/employer/applications")
+api.add_resource(CompaniesResource, "/companies")
+api.add_resource(UsersResource, "/users")
