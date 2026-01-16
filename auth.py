@@ -32,3 +32,19 @@ class Register(Resource):
             )
             db.session.add(user)
             db.session.commit()
+             # Create JWT token
+            token = create_access_token(
+                identity=user.id,
+                additional_claims={"role": user.role}
+            )
+
+            return {
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role
+                },
+                "access_token": token
+            }, 201
+
