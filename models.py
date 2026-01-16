@@ -70,3 +70,22 @@ class Job(db.Model, SerializerMixin):
         "-applications.job",
     )
 
+# -------------------------
+# APPLICATIONS (NO LOGIN)
+# -------------------------
+# models.py - Application table
+class Application(db.Model, SerializerMixin):
+    __tablename__ = "applications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    applicant_name = db.Column(db.Text, nullable=True)
+    education = db.Column(db.Text, nullable=True)
+    cv = db.Column(db.Text, nullable=False)
+    cover_letter = db.Column(db.Text, nullable=True)  # <-- rename from resume
+
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+    job_id = db.Column(db.Integer, db.ForeignKey("jobs.id"), nullable=False)
+    job = db.relationship("Job", back_populates="applications")
+
+    serialize_rules = ("-job.applications",)
+
