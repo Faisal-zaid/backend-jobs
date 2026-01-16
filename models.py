@@ -37,3 +37,36 @@ class Company(db.Model, SerializerMixin):
 
     serialize_rules = ("-jobs.company",)
 
+
+# -------------------------
+# JOBS
+# -------------------------
+class Job(db.Model, SerializerMixin):
+    __tablename__ = "jobs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    job_type = db.Column(db.Text, nullable=False)
+    education = db.Column(db.Text, nullable=False)
+
+    # 🔹 NEW
+    salary_min = db.Column(db.Integer, nullable=True)
+    salary_max = db.Column(db.Integer, nullable=True)
+    location = db.Column(db.Text, nullable=True)
+
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
+    employer_id = db.Column(db.Integer, nullable=False)
+
+    company = db.relationship("Company", back_populates="jobs")
+    applications = db.relationship(
+        "Application",
+        back_populates="job",
+        cascade="all, delete-orphan"
+    )
+
+    serialize_rules = (
+        "-company.jobs",
+        "-applications.job",
+    )
+
