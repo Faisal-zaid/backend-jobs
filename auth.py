@@ -50,7 +50,10 @@ class Register(Resource):
         except Exception as e:
             print("Register error:", e)
             return {"message": "Registration failed", "error": str(e)}, 500
-
-        
-        
+        # ---------------------------
+# Login parser
+# ---------------------------
+login_parser = reqparse.RequestParser(bundle_errors=True)
+login_parser.add_argument("email", required=True, type=str, help="Email is required")
+login_parser.add_argument("password", required=True, type=str, help="Password is required")
 
