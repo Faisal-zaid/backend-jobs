@@ -2,6 +2,7 @@ from flask_restful import Resource
 from flask import request
 from models import Application, Job, db
 
+
 class ApplyJob(Resource):
     def post(self):
         try:
