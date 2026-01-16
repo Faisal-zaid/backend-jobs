@@ -47,4 +47,10 @@ class Register(Resource):
                 },
                 "access_token": token
             }, 201
+        except Exception as e:
+            print("Register error:", e)
+            return {"message": "Registration failed", "error": str(e)}, 500
+
+        
+        
 
