@@ -32,3 +32,19 @@ app = Flask(__name__)
 # Database configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///jobconnect.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# JWT configuration 
+app.config["JWT_SECRET_KEY"] = os.environ.get(
+    "JWT_SECRET_KEY", "super-secret"
+)
+
+# Initialize database with app
+db.init_app(app)
+Migrate(app, db)
+
+# Initialize password hashing
+bcrypt = Bcrypt(app)
+
+# Initialize JWT manager
+jwt = JWTManager()
+jwt.init_app(app)
