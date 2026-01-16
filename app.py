@@ -48,3 +48,10 @@ bcrypt = Bcrypt(app)
 # Initialize JWT manager
 jwt = JWTManager()
 jwt.init_app(app)
+
+
+# Enable CORS for all routes
+CORS(app)
+
+# Initialize Flask-RESTful API
+api = Api(app)
