@@ -28,3 +28,7 @@ load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Database configuration
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///jobconnect.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
