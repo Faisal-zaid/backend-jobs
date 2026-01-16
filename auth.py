@@ -23,3 +23,12 @@ class Register(Resource):
 
             # Hash password
             password_hash = generate_password_hash(data["password"]).decode("utf-8")
+             # Create user
+            user = User(
+                name=data["name"],
+                email=data["email"],
+                password=password_hash,
+                role=data["role"]
+            )
+            db.session.add(user)
+            db.session.commit()
