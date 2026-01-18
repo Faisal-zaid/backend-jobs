@@ -7,7 +7,6 @@ metadata = MetaData()
 db = SQLAlchemy(metadata=metadata)
 
 
-
 # -------------------------
 # USERS (KEEP FOR LATER)
 # -------------------------
@@ -69,6 +68,8 @@ class Job(db.Model, SerializerMixin):
         "-company.jobs",
         "-applications.job",
     )
+
+
 
 # -------------------------
 # APPLICATIONS (NO LOGIN)
