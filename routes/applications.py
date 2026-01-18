@@ -46,8 +46,7 @@ class ApplyJob(Resource):
 
         except Exception as e:
             print("ApplyJob error:", e)
-            return {"message": "Failed to submit application", "error": str(e)}, 500
-
+            return {"message": "Failed to submit application", "error": str
 # -------------------------
 # EMPLOYER VIEW APPLICATIONS
 # -------------------------
