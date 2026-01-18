@@ -89,3 +89,7 @@ class EmployerApplications(Resource):
         except Exception as e:
             print("EmployerApplications error:", e)
             return {"message": str(e)}, 500
+        
+
+
+        
