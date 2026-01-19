@@ -6,13 +6,7 @@ from datetime import datetime
 metadata = MetaData()
 db = SQLAlchemy(metadata=metadata)
 
-<<<<<<< HEAD
-=======
 
->>>>>>> main
-# -------------------------
-# USERS
-# -------------------------
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
 
@@ -35,9 +29,9 @@ class User(db.Model, SerializerMixin):
     serialize_rules = ("-password", "-created_at", "-applications.applicant")
 
 
-# -------------------------
+
 # COMPANIES
-# -------------------------
+
 class Company(db.Model, SerializerMixin):
     __tablename__ = "companies"
 

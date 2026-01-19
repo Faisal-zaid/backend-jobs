@@ -45,24 +45,11 @@ class ApplyJob(Resource):
             }, 201
 
         except Exception as e:
-<<<<<<< HEAD
             db.session.rollback()
             return {"message": "Failed to submit application", "error": str(e)}, 500
-=======
-            print("ApplyJob error:", e)
-            return {"message": "Failed to submit application", "error": str(e)}, 500
-# -------------------------
-# EMPLOYER VIEW APPLICATIONS
-# -------------------------
-from flask_restful import Resource
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import Application, Job
->>>>>>> main
 
 
-# -------------------------
-# EMPLOYER: VIEW RECEIVED APPLICATIONS
-# -------------------------
+
 class EmployerApplications(Resource):
     @jwt_required()
     def get(self):
