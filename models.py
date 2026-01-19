@@ -23,11 +23,12 @@ class User(db.Model, SerializerMixin):
     country = db.Column(db.Text, nullable=True)
     phone_number = db.Column(db.Text, nullable=True)
 
-    # Automatically track when the user joined
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Serialization rules to hide sensitive info
-    serialize_rules = ("-password", "-created_at")
+    # Relationship to track applications sent by this user
+    applications = db.relationship("Application", back_populates="applicant", cascade="all, delete-orphan")
+
+    serialize_rules = ("-password", "-created_at", "-applications.applicant")
 
 
 # -------------------------
@@ -40,7 +41,6 @@ class Company(db.Model, SerializerMixin):
     name = db.Column(db.Text, nullable=False)
     location = db.Column(db.Text)
 
-    # Relationship to Jobs
     jobs = db.relationship("Job", back_populates="company", cascade="all, delete-orphan")
 
     serialize_rules = ("-jobs.company",)
@@ -55,19 +55,16 @@ class Job(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
-    job_type = db.Column(db.Text, nullable=False) # e.g., 'Remote', 'Full-time'
+    job_type = db.Column(db.Text, nullable=False) 
     education = db.Column(db.Text, nullable=False)
 
-    # Financial and Location details
     salary_min = db.Column(db.Integer, nullable=True)
     salary_max = db.Column(db.Integer, nullable=True)
     location = db.Column(db.Text, nullable=True)
 
-    # Foreign Keys
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
-    employer_id = db.Column(db.Integer, nullable=False) # Tracks which user posted it
+    employer_id = db.Column(db.Integer, nullable=False) 
 
-    # Relationships
     company = db.relationship("Company", back_populates="jobs")
     applications = db.relationship(
         "Application",
@@ -89,13 +86,19 @@ class Application(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     applicant_name = db.Column(db.Text, nullable=True)
     education = db.Column(db.Text, nullable=True)
-    cv = db.Column(db.Text, nullable=False) # Store path or base64 string
+    cv = db.Column(db.Text, nullable=False) 
     cover_letter = db.Column(db.Text, nullable=True) 
 
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # 🔹 CRITICAL FIX: Link to the User profile
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    
     # Connection to the Job
     job_id = db.Column(db.Integer, db.ForeignKey("jobs.id"), nullable=False)
+    
+    # Relationships
     job = db.relationship("Job", back_populates="applications")
+    applicant = db.relationship("User", back_populates="applications")
 
-    serialize_rules = ("-job.applications",)
+    serialize_rules = ("-job.applications", "-applicant.applications")
