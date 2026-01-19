@@ -6,6 +6,10 @@ from datetime import datetime
 metadata = MetaData()
 db = SQLAlchemy(metadata=metadata)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
 # -------------------------
 # USERS
 # -------------------------
@@ -76,6 +80,8 @@ class Job(db.Model, SerializerMixin):
         "-company.jobs",
         "-applications.job",
     )
+
+
 
 # -------------------------
 # APPLICATIONS

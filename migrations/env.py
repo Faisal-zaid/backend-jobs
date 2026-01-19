@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+from __future__ import with_statement
+
+>>>>>>> main
 import logging
 from logging.config import fileConfig
 
@@ -14,6 +19,7 @@ config = context.config
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
+<<<<<<< HEAD
 
 def get_engine():
     try:
@@ -32,12 +38,22 @@ def get_engine_url():
         return str(get_engine().url).replace('%', '%%')
 
 
+=======
+>>>>>>> main
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
+<<<<<<< HEAD
 config.set_main_option('sqlalchemy.url', get_engine_url())
 target_db = current_app.extensions['migrate'].db
+=======
+config.set_main_option(
+    'sqlalchemy.url',
+    str(current_app.extensions['migrate'].db.get_engine().url).replace(
+        '%', '%%'))
+target_metadata = current_app.extensions['migrate'].db.metadata
+>>>>>>> main
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -45,12 +61,15 @@ target_db = current_app.extensions['migrate'].db
 # ... etc.
 
 
+<<<<<<< HEAD
 def get_metadata():
     if hasattr(target_db, 'metadatas'):
         return target_db.metadatas[None]
     return target_db.metadata
 
 
+=======
+>>>>>>> main
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 
@@ -65,7 +84,11 @@ def run_migrations_offline():
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
+<<<<<<< HEAD
         url=url, target_metadata=get_metadata(), literal_binds=True
+=======
+        url=url, target_metadata=target_metadata, literal_binds=True
+>>>>>>> main
     )
 
     with context.begin_transaction():
@@ -90,17 +113,27 @@ def run_migrations_online():
                 directives[:] = []
                 logger.info('No changes in schema detected.')
 
+<<<<<<< HEAD
     conf_args = current_app.extensions['migrate'].configure_args
     if conf_args.get("process_revision_directives") is None:
         conf_args["process_revision_directives"] = process_revision_directives
 
     connectable = get_engine()
+=======
+    connectable = current_app.extensions['migrate'].db.get_engine()
+>>>>>>> main
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
+<<<<<<< HEAD
             target_metadata=get_metadata(),
             **conf_args
+=======
+            target_metadata=target_metadata,
+            process_revision_directives=process_revision_directives,
+            **current_app.extensions['migrate'].configure_args
+>>>>>>> main
         )
 
         with context.begin_transaction():
