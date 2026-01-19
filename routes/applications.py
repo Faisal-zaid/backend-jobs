@@ -1,7 +1,11 @@
 from flask_restful import Resource
 from flask import request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import Application, Job, db
 
+# -------------------------
+# JOB SEEKER: SUBMIT APPLICATION
+# -------------------------
 class ApplyJob(Resource):
     def post(self):
         try:
@@ -9,6 +13,7 @@ class ApplyJob(Resource):
             if not data:
                 return {"message": "No input data provided"}, 400
 
+            # Validation
             required_fields = ["job_id", "applicant_name", "education", "cv", "cover_letter"]
             missing = [f for f in required_fields if not data.get(f)]
             if missing:
@@ -32,36 +37,31 @@ class ApplyJob(Resource):
 
             return {
                 "message": "Application submitted successfully",
-                "application": {
-                    "id": application.id,
-                    "applicant_name": application.applicant_name,
-                    "education": application.education,
-                    "cv": application.cv,
-                    "cover_letter": application.cover_letter,
-                    "job_id": application.job_id,
-                    "job_title": job.title,
-                    "company_name": job.company.name if job.company else "N/A"
-                }
+                "application": application.to_dict() # Assumes SerializerMixin is in models
             }, 201
 
         except Exception as e:
-            print("ApplyJob error:", e)
-            return {"message": "Failed to submit application", "error": str
-# -------------------------
-# EMPLOYER VIEW APPLICATIONS
-# -------------------------
-from flask_restful import Resource
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import Application, Job
+            db.session.rollback()
+            return {"message": "Failed to submit application", "error": str(e)}, 500
+
+
+# EMPLOYER: VIEW RECEIVED APPLICATIONS
 
 class EmployerApplications(Resource):
     @jwt_required()
     def get(self):
         try:
+            # Identity from the JWT token (Employer's ID)
             employer_id = get_jwt_identity()
-            jobs = Job.query.filter_by(employer_id=employer_id).all()
-            job_ids = [job.id for job in jobs]
+            
+            # 1. Find all jobs belonging to this employer
+            employer_jobs = Job.query.filter_by(employer_id=employer_id).all()
+            job_ids = [job.id for job in employer_jobs]
 
+            if not job_ids:
+                return {"applications": []}, 200
+
+            # 2. Get applications for those specific jobs
             applications = Application.query.filter(
                 Application.job_id.in_(job_ids)
             ).all()
@@ -76,14 +76,10 @@ class EmployerApplications(Resource):
                         "cover_letter": app.cover_letter,
                         "job_id": app.job_id,
                         "job_title": app.job.title if app.job else "N/A",
-                        "user": {
-                            "name": app.user.name if app.user else "N/A",
-                            "email": app.user.email if app.user else "N/A"
-                        }
+                        "submitted_at": app.created_at.strftime("%Y-%m-%d") if hasattr(app, 'created_at') else None
                     } for app in applications
                 ]
             }, 200
 
         except Exception as e:
-            print("EmployerApplications error:", e)
-            return {"message": str(e)}, 500
+            return {"message": "Error fetching applications", "error": str(e)}, 500
