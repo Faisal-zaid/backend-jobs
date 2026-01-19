@@ -1,14 +1,21 @@
 from flask_restful import Resource
 from flask import request
-from models import Application, Job, db
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import Application, Job, User, db
 
+# -------------------------
+# JOB SEEKER: SUBMIT APPLICATION
+# -------------------------
 class ApplyJob(Resource):
+    @jwt_required()  # Added requirement to identify who is applying
     def post(self):
         try:
+            user_id = get_jwt_identity() # Identify the applicant
             data = request.get_json()
             if not data:
                 return {"message": "No input data provided"}, 400
 
+            # Validation
             required_fields = ["job_id", "applicant_name", "education", "cv", "cover_letter"]
             missing = [f for f in required_fields if not data.get(f)]
             if missing:
@@ -19,7 +26,9 @@ class ApplyJob(Resource):
             if not job:
                 return {"message": "Job not found"}, 404
 
+            # Updated to include user_id so we can track the applicant's profile
             application = Application(
+                user_id=user_id, # Links application to the applicant's User profile
                 applicant_name=data["applicant_name"],
                 education=data["education"],
                 cv=data["cv"],
@@ -32,58 +41,60 @@ class ApplyJob(Resource):
 
             return {
                 "message": "Application submitted successfully",
-                "application": {
-                    "id": application.id,
-                    "applicant_name": application.applicant_name,
-                    "education": application.education,
-                    "cv": application.cv,
-                    "cover_letter": application.cover_letter,
-                    "job_id": application.job_id,
-                    "job_title": job.title,
-                    "company_name": job.company.name if job.company else "N/A"
-                }
+                "application": application.to_dict() 
             }, 201
 
         except Exception as e:
-            print("ApplyJob error:", e)
+            db.session.rollback()
             return {"message": "Failed to submit application", "error": str(e)}, 500
-# -------------------------
-# EMPLOYER VIEW APPLICATIONS
-# -------------------------
-from flask_restful import Resource
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import Application, Job
+
+
 
 class EmployerApplications(Resource):
     @jwt_required()
     def get(self):
         try:
+            # Identity from the JWT token (Employer's User ID)
             employer_id = get_jwt_identity()
-            jobs = Job.query.filter_by(employer_id=employer_id).all()
-            job_ids = [job.id for job in jobs]
+            
+            # Use a JOIN to get Application data + User profile data (Age, Country, Phone)
+            # This fetches everything in one query for efficiency
+            query_results = db.session.query(
+                Application, 
+                User.age, 
+                User.country, 
+                User.phone_number
+            ).join(User, Application.user_id == User.id)\
+             .join(Job, Application.job_id == Job.id)\
+             .filter(Job.employer_id == employer_id)\
+             .order_by(Application.applied_at.desc()).all()
 
-            applications = Application.query.filter(
-                Application.job_id.in_(job_ids)
-            ).all()
+            if not query_results:
+                return {"applications": [], "message": "No applications found"}, 200
+
+            # 3. Format data including the joined User profile details
+            formatted_apps = []
+            for app, age, country, phone in query_results:
+                formatted_apps.append({
+                    "id": app.id,
+                    "applicant_name": app.applicant_name,
+                    "education": app.education,
+                    "cv": app.cv,
+                    "cover_letter": app.cover_letter,
+                    "job_id": app.job_id,
+                    "job_title": app.job.title if app.job else "Unknown Position",
+                    "applied_at": app.applied_at.strftime("%b %d, %Y") if app.applied_at else None,
+                    
+                    # FETCHED FROM THE JOINED USER TABLE
+                    "age": age,
+                    "country": country,
+                    "phone_number": phone
+                })
 
             return {
-                "applications": [
-                    {
-                        "id": app.id,
-                        "applicant_name": app.applicant_name,
-                        "education": app.education,
-                        "cv": app.cv,
-                        "cover_letter": app.cover_letter,
-                        "job_id": app.job_id,
-                        "job_title": app.job.title if app.job else "N/A",
-                        "user": {
-                            "name": app.user.name if app.user else "N/A",
-                            "email": app.user.email if app.user else "N/A"
-                        }
-                    } for app in applications
-                ]
+                "count": len(formatted_apps),
+                "applications": formatted_apps
             }, 200
 
         except Exception as e:
-            print("EmployerApplications error:", e)
-            return {"message": str(e)}, 500
+            return {"message": "Error fetching applications", "error": str(e)}, 500

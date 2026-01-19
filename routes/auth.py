@@ -4,13 +4,18 @@ from flask_bcrypt import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token
 
 # ---------------------------
-# Register parser
+# Register parser - Updated with new fields
 # ---------------------------
 register_parser = reqparse.RequestParser(bundle_errors=True)
 register_parser.add_argument("name", required=True, type=str, help="Name is required")
 register_parser.add_argument("email", required=True, type=str, help="Email is required")
 register_parser.add_argument("password", required=True, type=str, help="Password is required")
 register_parser.add_argument("role", required=True, type=str, help="Role is required")
+
+# 🔹 ADDED NEW FIELDS
+register_parser.add_argument("age", required=True, type=int, help="Age is required and must be an integer")
+register_parser.add_argument("country", required=True, type=str, help="Country is required")
+register_parser.add_argument("phone", required=True, type=str, help="Phone number is required")
 
 class Register(Resource):
     def post(self):
@@ -23,16 +28,22 @@ class Register(Resource):
 
             # Hash password
             password_hash = generate_password_hash(data["password"]).decode("utf-8")
-             # Create user
+            
+            # 🔹 Create user with new fields
             user = User(
                 name=data["name"],
                 email=data["email"],
                 password=password_hash,
-                role=data["role"]
+                role=data["role"],
+                age=data["age"],
+                country=data["country"],
+                phone_number=data["phone"] # Mapping 'phone' from React to 'phone_number' in DB
             )
+            
             db.session.add(user)
             db.session.commit()
-             # Create JWT token
+
+            # Create JWT token
             token = create_access_token(
                 identity=user.id,
                 additional_claims={"role": user.role}
@@ -43,14 +54,17 @@ class Register(Resource):
                     "id": user.id,
                     "name": user.name,
                     "email": user.email,
-                    "role": user.role
+                    "role": user.role,
+                    "age": user.age,
+                    "country": user.country
                 },
                 "access_token": token
             }, 201
         except Exception as e:
             print("Register error:", e)
             return {"message": "Registration failed", "error": str(e)}, 500
-        # ---------------------------
+
+# ---------------------------
 # Login parser
 # ---------------------------
 login_parser = reqparse.RequestParser(bundle_errors=True)
@@ -80,7 +94,9 @@ class Login(Resource):
                     "id": user.id,
                     "name": user.name,
                     "email": user.email,
-                    "role": user.role
+                    "role": user.role,
+                    "age": user.age,      # 🔹 Added for frontend profile context
+                    "country": user.country
                 },
                 "access_token": token
             }, 200
