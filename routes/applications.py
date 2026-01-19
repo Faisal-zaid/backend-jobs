@@ -7,10 +7,8 @@ from models import Application, Job, User, db
 # JOB SEEKER: SUBMIT APPLICATION
 # -------------------------
 class ApplyJob(Resource):
-    @jwt_required()  # Added requirement to identify who is applying
     def post(self):
         try:
-            user_id = get_jwt_identity() # Identify the applicant
             data = request.get_json()
             if not data:
                 return {"message": "No input data provided"}, 400
@@ -26,9 +24,7 @@ class ApplyJob(Resource):
             if not job:
                 return {"message": "Job not found"}, 404
 
-            # Updated to include user_id so we can track the applicant's profile
             application = Application(
-                user_id=user_id, # Links application to the applicant's User profile
                 applicant_name=data["applicant_name"],
                 education=data["education"],
                 cv=data["cv"],
@@ -49,7 +45,9 @@ class ApplyJob(Resource):
             return {"message": "Failed to submit application", "error": str(e)}, 500
 
 
-
+# -------------------------
+# EMPLOYER: VIEW RECEIVED APPLICATIONS
+# -------------------------
 class EmployerApplications(Resource):
     @jwt_required()
     def get(self):
@@ -57,43 +55,38 @@ class EmployerApplications(Resource):
             # Identity from the JWT token (Employer's User ID)
             employer_id = get_jwt_identity()
             
-            # Use a JOIN to get Application data + User profile data (Age, Country, Phone)
-            # This fetches everything in one query for efficiency
-            query_results = db.session.query(
-                Application, 
-                User.age, 
-                User.country, 
-                User.phone_number
-            ).join(User, Application.user_id == User.id)\
-             .join(Job, Application.job_id == Job.id)\
-             .filter(Job.employer_id == employer_id)\
-             .order_by(Application.applied_at.desc()).all()
+            # 1. Find all jobs belonging to this employer
+            employer_jobs = Job.query.filter_by(employer_id=employer_id).all()
+            job_ids = [job.id for job in employer_jobs]
 
-            if not query_results:
-                return {"applications": [], "message": "No applications found"}, 200
+            if not job_ids:
+                return {"applications": [], "message": "No jobs found for this employer"}, 200
 
-            # 3. Format data including the joined User profile details
-            formatted_apps = []
-            for app, age, country, phone in query_results:
-                formatted_apps.append({
-                    "id": app.id,
-                    "applicant_name": app.applicant_name,
-                    "education": app.education,
-                    "cv": app.cv,
-                    "cover_letter": app.cover_letter,
-                    "job_id": app.job_id,
-                    "job_title": app.job.title if app.job else "Unknown Position",
-                    "applied_at": app.applied_at.strftime("%b %d, %Y") if app.applied_at else None,
-                    
-                    # FETCHED FROM THE JOINED USER TABLE
-                    "age": age,
-                    "country": country,
-                    "phone_number": phone
-                })
+            # 2. Get applications for those specific jobs
+            # We use joinedload or simple relationship access to get job titles
+            applications = Application.query.filter(
+                Application.job_id.in_(job_ids)
+            ).order_by(Application.applied_at.desc()).all()
 
+            # 3. Format data for the "Pro-Blue" Dashboard
             return {
-                "count": len(formatted_apps),
-                "applications": formatted_apps
+                "count": len(applications),
+                "applications": [
+                    {
+                        "id": app.id,
+                        "applicant_name": app.applicant_name,
+                        "education": app.education,
+                        "cv": app.cv,
+                        "cover_letter": app.cover_letter,
+                        "job_id": app.job_id,
+                        "job_title": app.job.title if app.job else "Unknown Position",
+                        "applied_at": app.applied_at.strftime("%b %d, %Y") if app.applied_at else None,
+                        
+                        # Note: If you want to fetch Age/Country/Phone from the User table, 
+                        # you'll need to add user_id to the Application model. 
+                        # For now, we return what is stored in the application record.
+                    } for app in applications
+                ]
             }, 200
 
         except Exception as e:
