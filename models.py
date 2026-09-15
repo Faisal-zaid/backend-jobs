@@ -14,7 +14,7 @@ class User(db.Model, SerializerMixin):
     name = db.Column(db.Text, nullable=False)
     email = db.Column(db.Text, nullable=False, unique=True)
     password = db.Column(db.Text, nullable=False)
-    role = db.Column(db.Enum("job_seeker", "employer"), nullable=False)
+    role = db.Column(db.Enum("job_seeker", "employer", name="user_role_enum"), nullable=False)
 
     # 🔹 NEW FIELDS FOR REGISTRATION
     age = db.Column(db.Integer, nullable=True)
