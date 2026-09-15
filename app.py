@@ -50,7 +50,10 @@ api = Api(app)
 # --- DATABASE SETUP ---
 # This ensures tables are created with new columns if they don't exist
 with app.app_context():
-    db.drop_all()   # Drops existing tables with missing columns
+    # Force CASCADE drop on PostgreSQL to remove dependent foreign key tables (e.g., orders)
+    db.session.execute(db.text("DROP SCHEMA public CASCADE;"))
+    db.session.execute(db.text("CREATE SCHEMA public;"))
+    db.session.commit()
     db.create_all()
 
 # --- ROUTES ---
