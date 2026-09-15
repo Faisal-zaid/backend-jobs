@@ -85,8 +85,8 @@ class Login(Resource):
                 return {"message": "Invalid email or password"}, 401
 
             token = create_access_token(
-                identity=user.id,
-                additional_claims={"role": user.role}
+                identity=str(user.id),
+                additional_claims={"role": str(user.role)}
             )
 
             return {
