@@ -45,8 +45,8 @@ class Register(Resource):
 
             # Create JWT token
             token = create_access_token(
-                identity=user.id,
-                additional_claims={"role": user.role}
+                identity=str(user.id),
+                additional_claims={"role": str(user.role)}
             )
 
             return {
