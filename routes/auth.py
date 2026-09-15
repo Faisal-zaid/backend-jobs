@@ -2,6 +2,7 @@ from flask_restful import Resource, reqparse
 from models import User, db
 from flask_bcrypt import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token
+import traceback
 
 # ---------------------------
 # Register parser
@@ -12,18 +13,19 @@ register_parser.add_argument("email", required=True, type=str, help="Email is re
 register_parser.add_argument("password", required=True, type=str, help="Password is required")
 register_parser.add_argument("role", required=True, type=str, help="Role is required")
 
-# Set required=False and flexible types to prevent parsing crashes
+# Flexible optional arguments to prevent reqparse crash
 register_parser.add_argument("age", required=False)
 register_parser.add_argument("country", required=False, type=str)
 register_parser.add_argument("phone", required=False, type=str)
 register_parser.add_argument("phone_number", required=False, type=str)
+
 
 class Register(Resource):
     def post(self):
         try:
             data = register_parser.parse_args()
 
-            # Check if user already exists
+            # Check if user exists
             if User.query.filter_by(email=data["email"]).first():
                 return {"message": "User already exists"}, 409
 
@@ -32,16 +34,16 @@ class Register(Resource):
             if data.get("age") is not None and str(data["age"]).isdigit():
                 parsed_age = int(data["age"])
 
-            # Map phone field flexibly
+            # Support both 'phone' and 'phone_number' parameter keys
             phone_val = data.get("phone") or data.get("phone_number") or ""
 
-            # Hash password safely
+            # Hash password
             password_hash = generate_password_hash(data["password"]).decode("utf-8")
 
-            # Format role string to match postgres enum expectations
+            # Format role string safely
             user_role = str(data["role"]).strip().lower()
 
-            # Create user model instance
+            # Instantiate User
             user = User(
                 name=data["name"],
                 email=data["email"],
@@ -55,7 +57,7 @@ class Register(Resource):
             db.session.add(user)
             db.session.commit()
 
-            # Generate JWT token with stringified identity & claims
+            # Generate JWT token (identity and claims converted to string)
             token = create_access_token(
                 identity=str(user.id),
                 additional_claims={"role": str(user.role)}
@@ -74,9 +76,19 @@ class Register(Resource):
             }, 201
 
         except Exception as e:
+            # Rollback active database transaction to prevent deadlocks
             db.session.rollback()
-            print("Register exception caught:", str(e))
-            return {"message": "Registration failed", "error": str(e)}, 500
+            
+            # Print full detailed python traceback in the console logs
+            print("\n==================== REGISTER ERROR TRACEBACK ====================")
+            traceback.print_exc()
+            print("==================================================================\n")
+            
+            return {
+                "message": "Registration failed",
+                "error": str(e),
+                "type": type(e).__name__
+            }, 500
 
 
 # ---------------------------
@@ -85,6 +97,7 @@ class Register(Resource):
 login_parser = reqparse.RequestParser(bundle_errors=True)
 login_parser.add_argument("email", required=True, type=str, help="Email is required")
 login_parser.add_argument("password", required=True, type=str, help="Password is required")
+
 
 class Login(Resource):
     def post(self):
@@ -113,5 +126,12 @@ class Login(Resource):
             }, 200
 
         except Exception as e:
-            print("Login exception caught:", str(e))
-            return {"message": "Login failed", "error": str(e)}, 500
+            print("\n==================== LOGIN ERROR TRACEBACK ====================")
+            traceback.print_exc()
+            print("==================================================================\n")
+            
+            return {
+                "message": "Login failed",
+                "error": str(e),
+                "type": type(e).__name__
+            }, 500
