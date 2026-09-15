@@ -50,6 +50,7 @@ api = Api(app)
 # --- DATABASE SETUP ---
 # This ensures tables are created with new columns if they don't exist
 with app.app_context():
+    db.drop_all()   # Drops existing tables with missing columns
     db.create_all()
 
 # --- ROUTES ---
