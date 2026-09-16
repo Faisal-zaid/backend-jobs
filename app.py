@@ -6,6 +6,7 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
 # Import API resource classes
 from models import db
@@ -21,10 +22,22 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 
-# --- CONFIGURATION ---
-# Database configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///jobconnect.db")
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# Explicitly load .env relative to this file's folder
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
+# Retrieve DATABASE_URL
+db_url = os.environ.get("DATABASE_URL")
+
+if db_url:
+    # Fix legacy 'postgres://' URLs from Render/Heroku for SQLAlchemy
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    print(f"--> [DATABASE]: Connected to remote database.")
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///jobconnect.db"
+    print("--> [DATABASE]: DATABASE_URL not found. Falling back to local SQLite.")
 
 # JWT configuration 
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "pro-blue-secret-99")
@@ -56,15 +69,12 @@ api = Api(app)
 #     db.session.commit()
 #     db.create_all()
 
+# --- DATABASE SETUP ---
 with app.app_context():
-    # Only execute Postgres schema drops if connected to PostgreSQL
-    if db.engine.name == "postgresql":
-        db.session.execute(db.text("DROP SCHEMA public CASCADE;"))
-        db.session.execute(db.text("CREATE SCHEMA public;"))
-        db.session.commit()
+    # Creates missing tables safely without wiping existing user data
+    db.create_all()
     
-    # Safely creates all tables for both SQLite and PostgreSQL
-    db.create_all()    
+       
 
 # --- ROUTES ---
 @app.route("/")
