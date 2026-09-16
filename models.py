@@ -7,6 +7,9 @@ metadata = MetaData()
 db = SQLAlchemy(metadata=metadata)
 
 
+# -------------------------
+# USERS MODEL
+# -------------------------
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
 
@@ -16,22 +19,21 @@ class User(db.Model, SerializerMixin):
     password = db.Column(db.Text, nullable=False)
     role = db.Column(db.Enum("job_seeker", "employer", name="user_role_enum"), nullable=False)
 
-    # 🔹 NEW FIELDS FOR REGISTRATION
     age = db.Column(db.Integer, nullable=True)
     country = db.Column(db.Text, nullable=True)
     phone_number = db.Column(db.Text, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationship to track applications sent by this user
     applications = db.relationship("Application", back_populates="applicant", cascade="all, delete-orphan")
+    jobs_posted = db.relationship("Job", back_populates="employer", cascade="all, delete-orphan")
 
-    serialize_rules = ("-password", "-created_at", "-applications.applicant")
+    serialize_rules = ("-password", "-created_at", "-applications.applicant", "-jobs_posted.employer")
 
 
-
-# COMPANIES
-
+# -------------------------
+# COMPANIES MODEL
+# -------------------------
 class Company(db.Model, SerializerMixin):
     __tablename__ = "companies"
 
@@ -45,7 +47,7 @@ class Company(db.Model, SerializerMixin):
 
 
 # -------------------------
-# JOBS
+# JOBS MODEL
 # -------------------------
 class Job(db.Model, SerializerMixin):
     __tablename__ = "jobs"
@@ -53,7 +55,7 @@ class Job(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
-    job_type = db.Column(db.Text, nullable=False) 
+    job_type = db.Column(db.Text, nullable=False)
     education = db.Column(db.Text, nullable=False)
 
     salary_min = db.Column(db.Integer, nullable=True)
@@ -61,9 +63,10 @@ class Job(db.Model, SerializerMixin):
     location = db.Column(db.Text, nullable=True)
 
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
-    employer_id = db.Column(db.Integer, nullable=False) 
+    employer_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     company = db.relationship("Company", back_populates="jobs")
+    employer = db.relationship("User", back_populates="jobs_posted")
     applications = db.relationship(
         "Application",
         back_populates="job",
@@ -72,13 +75,13 @@ class Job(db.Model, SerializerMixin):
 
     serialize_rules = (
         "-company.jobs",
+        "-employer.jobs_posted",
         "-applications.job",
     )
 
 
-
 # -------------------------
-# APPLICATIONS
+# APPLICATIONS MODEL
 # -------------------------
 class Application(db.Model, SerializerMixin):
     __tablename__ = "applications"
@@ -86,18 +89,14 @@ class Application(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     applicant_name = db.Column(db.Text, nullable=True)
     education = db.Column(db.Text, nullable=True)
-    cv = db.Column(db.Text, nullable=False) 
-    cover_letter = db.Column(db.Text, nullable=True) 
+    cv = db.Column(db.Text, nullable=False)
+    cover_letter = db.Column(db.Text, nullable=True)
 
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # 🔹 CRITICAL FIX: Link to the User profile
+
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    
-    # Connection to the Job
     job_id = db.Column(db.Integer, db.ForeignKey("jobs.id"), nullable=False)
-    
-    # Relationships
+
     job = db.relationship("Job", back_populates="applications")
     applicant = db.relationship("User", back_populates="applications")
 
