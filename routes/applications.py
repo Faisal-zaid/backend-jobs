@@ -2,33 +2,30 @@ from flask_restful import Resource
 from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import Application, Job, User, db
+import traceback
 
-# -------------------------
-# JOB SEEKER: SUBMIT APPLICATION
-# -------------------------
 class ApplyJob(Resource):
-    @jwt_required()  # Added requirement to identify who is applying
+    @jwt_required()
     def post(self):
         try:
-            user_id = get_jwt_identity() # Identify the applicant
+            raw_identity = get_jwt_identity()
+            user_id = int(raw_identity) if str(raw_identity).isdigit() else raw_identity
+            
             data = request.get_json()
             if not data:
                 return {"message": "No input data provided"}, 400
 
-            # Validation
             required_fields = ["job_id", "applicant_name", "education", "cv", "cover_letter"]
             missing = [f for f in required_fields if not data.get(f)]
             if missing:
                 return {"message": {f: f"{f.replace('_', ' ').capitalize()} is required" for f in missing}}, 400
 
-            # Check job exists
             job = Job.query.get(data["job_id"])
             if not job:
                 return {"message": "Job not found"}, 404
 
-            # Updated to include user_id so we can track the applicant's profile
             application = Application(
-                user_id=user_id, # Links application to the applicant's User profile
+                user_id=user_id,
                 applicant_name=data["applicant_name"],
                 education=data["education"],
                 cv=data["cv"],
@@ -41,24 +38,24 @@ class ApplyJob(Resource):
 
             return {
                 "message": "Application submitted successfully",
-                "application": application.to_dict() 
+                "application": application.to_dict()
             }, 201
 
         except Exception as e:
             db.session.rollback()
+            print("\n==================== APPLY JOB ERROR ====================")
+            traceback.print_exc()
+            print("=========================================================\n")
             return {"message": "Failed to submit application", "error": str(e)}, 500
-
 
 
 class EmployerApplications(Resource):
     @jwt_required()
     def get(self):
         try:
-            # Identity from the JWT token (Employer's User ID)
-            employer_id = get_jwt_identity()
-            
-            # Use a JOIN to get Application data + User profile data (Age, Country, Phone)
-            # This fetches everything in one query for efficiency
+            raw_identity = get_jwt_identity()
+            employer_id = int(raw_identity) if str(raw_identity).isdigit() else raw_identity
+
             query_results = db.session.query(
                 Application, 
                 User.age, 
@@ -72,7 +69,6 @@ class EmployerApplications(Resource):
             if not query_results:
                 return {"applications": [], "message": "No applications found"}, 200
 
-            # 3. Format data including the joined User profile details
             formatted_apps = []
             for app, age, country, phone in query_results:
                 formatted_apps.append({
@@ -84,8 +80,6 @@ class EmployerApplications(Resource):
                     "job_id": app.job_id,
                     "job_title": app.job.title if app.job else "Unknown Position",
                     "applied_at": app.applied_at.strftime("%b %d, %Y") if app.applied_at else None,
-                    
-                    # FETCHED FROM THE JOINED USER TABLE
                     "age": age,
                     "country": country,
                     "phone_number": phone
@@ -97,4 +91,7 @@ class EmployerApplications(Resource):
             }, 200
 
         except Exception as e:
+            print("\n==================== GET APPLICATIONS ERROR ====================")
+            traceback.print_exc()
+            print("=================================================================\n")
             return {"message": "Error fetching applications", "error": str(e)}, 500
